@@ -12,6 +12,8 @@ export default defineConfig({
     // 既定は Node 環境。DOM が必要なテストはファイル先頭で
     // `// @vitest-environment jsdom` を指定する。
     environment: "node",
+    // 日時の整形は実行環境のタイムゾーンに依存するため、テストでは固定する。
+    env: { TZ: "Asia/Tokyo" },
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     restoreMocks: true,
   },

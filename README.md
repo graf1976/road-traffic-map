@@ -15,6 +15,7 @@
 | 現在地取得 | Geolocation API で現在地を取得し、地図の中心を移動＋ピンを表示 |
 | 自動更新 | 更新なし（手動）／1 分／5 分／10 分 から選択。次回更新までの残り秒数も表示 |
 | 凡例 | 地図上に色の意味を常時表示 |
+| エラー表示 | 位置情報の失敗・API 取得失敗・API キー未設定・描画エラーをそれぞれ画面上で案内 |
 
 ## セットアップ
 
@@ -78,7 +79,10 @@ npm run build        # 本番ビルド
 src/
 ├── app/
 │   ├── api/regulations/route.ts   規制情報を返す API（GeoJSON）
+│   ├── error.tsx                  ページ内エラーのフォールバック
+│   ├── global-error.tsx           ルートレイアウトごと失敗した場合の表示
 │   ├── globals.css
+│   ├── icon.svg                   ファビコン
 │   ├── layout.tsx
 │   └── page.tsx                   ヘッダー・フィルタ・一覧・地図の組み立て
 ├── components/
@@ -167,10 +171,17 @@ Vitest で以下を検証しています（`src/**/__tests__`）。
 - `regulation-normalize` … 表記ゆれの変換、壊れたデータの除去、安全でないリンクの除去
 - `regulation-source` … モック／実データ／キャッシュ／フォールバックの切り替え
 - `regulation-filter` … 種別ごとの集計と絞り込み
+- `regulation-ui` … 日時の整形とステータス配色の網羅
 - `geo` … GeoJSON 座標（[経度, 緯度]）から地図用座標への変換
 - `api/regulations` … レスポンス形式とキャッシュ制御ヘッダー
 - `useCountdown` … 自動更新までのカウントダウンとタイマー解除
+- `useCurrentLocation` … 取得成功・権限拒否・タイムアウト・非対応ブラウザ
 - `RegulationList` … 一覧の描画・選択・空表示
+- `StatusFilter` … チェック状態とトグルの通知
+- `RegulationInfoContent` … ポップアップの表示内容とリンクの安全性
+
+日時の整形は実行環境のタイムゾーンに依存するため、テストでは `Asia/Tokyo` に固定しています
+（`vitest.config.mts`）。
 
 ## 技術スタック
 

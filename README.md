@@ -179,6 +179,12 @@ Vitest で以下を検証しています（`src/**/__tests__`）。
 - `RegulationList` … 一覧の描画・選択・空表示
 - `StatusFilter` … チェック状態とトグルの通知
 - `RegulationInfoContent` … ポップアップの表示内容とリンクの安全性
+- `RegulationLayer` … 黒線の描画、座標変換、ホバー／クリックの通知
+- `TrafficLayer` … 渋滞レイヤーの追加とアンマウント時の解除
+- `Map` … API キー未設定時の案内、InfoWindow と現在地ピンの表示制御
+
+Google Maps に依存するコンポーネントは `@vis.gl/react-google-maps` をモックしているため、
+API キーが無い環境（CI を含む）でも検証できます。
 
 日時の整形は実行環境のタイムゾーンに依存するため、テストでは `Asia/Tokyo` に固定しています
 （`vitest.config.mts`）。

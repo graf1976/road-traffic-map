@@ -37,7 +37,7 @@ export function RegulationList({
   return (
     <section
       aria-label="規制情報一覧"
-      className="flex h-full max-h-[55vh] flex-col border-t border-slate-200 bg-white lg:max-h-none lg:border-t-0 lg:border-l"
+      className="flex min-h-0 flex-1 flex-col border-t border-slate-200 bg-white lg:border-t-0 lg:border-l"
     >
       <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-2">
         <h2 className="text-sm font-bold text-slate-800">

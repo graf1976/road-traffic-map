@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 
 import { Legend } from "@/components/Legend";
 import { LocateButton } from "@/components/LocateButton";
+import { OfficialLinks } from "@/components/OfficialLinks";
 import type { MapFocus } from "@/components/Map";
 import type { RegulationHit } from "@/components/RegulationLayer";
 import { RegulationList } from "@/components/RegulationList";
@@ -16,6 +17,7 @@ import {
 } from "@/hooks/useCurrentLocation";
 import { useRegulations } from "@/hooks/useRegulations";
 import { midpoint } from "@/lib/geo";
+import { centerOf } from "@/lib/official-links";
 import {
   countByStatus,
   filterByBounds,
@@ -126,6 +128,9 @@ export default function Home() {
     () => (restrictToView ? filterByBounds(visibleFeatures, bounds) : visibleFeatures),
     [visibleFeatures, restrictToView, bounds],
   );
+
+  /** 地図が写している中心。公式サイトの案内先を決めるのに使う。 */
+  const mapCenter = useMemo(() => centerOf(bounds), [bounds]);
 
   const userPosition = useMemo(
     () => (position ? { lat: position.lat, lng: position.lng } : null),
@@ -374,7 +379,7 @@ export default function Home() {
         </div>
 
         {isListOpen && (
-          <div className="absolute inset-x-0 bottom-0 z-20 shadow-lg lg:static lg:z-auto lg:w-96 lg:shrink-0 lg:shadow-none">
+          <div className="absolute inset-x-0 bottom-0 z-20 flex max-h-[60vh] flex-col bg-white shadow-lg lg:static lg:z-auto lg:h-full lg:max-h-none lg:w-96 lg:shrink-0 lg:shadow-none">
             <RegulationList
               features={listedFeatures}
               selectedId={selection?.featureId ?? null}
@@ -385,6 +390,7 @@ export default function Home() {
               onSelect={handleListSelect}
               onClose={() => setIsListOpen(false)}
             />
+            <OfficialLinks center={mapCenter} />
           </div>
         )}
       </div>

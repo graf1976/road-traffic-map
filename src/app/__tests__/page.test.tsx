@@ -125,6 +125,23 @@ describe("トップページの一覧", () => {
     expect(screen.getByText("九州の道路")).toBeTruthy();
   });
 
+  it("公式サイトの案内も地図の範囲に追従する", async () => {
+    render(<Home />);
+    expect(await screen.findByText("関東の道路")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "関東を表示" }));
+    await waitFor(() => {
+      expect(screen.getByText("関東の規制情報を公式サイトで見る")).toBeTruthy();
+    });
+    expect(screen.getByRole("link", { name: /首都高速/ })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "九州を表示" }));
+    await waitFor(() => {
+      expect(screen.getByText("九州の規制情報を公式サイトで見る")).toBeTruthy();
+    });
+    expect(screen.getByRole("link", { name: /NEXCO西日本/ })).toBeTruthy();
+  });
+
   it("範囲内に規制が無いときは地図を動かすよう案内する", async () => {
     render(<Home />);
     expect(await screen.findByText("関東の道路")).toBeTruthy();

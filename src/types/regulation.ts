@@ -80,6 +80,14 @@ export interface LatLng {
   lng: number;
 }
 
+/** 地図が表示している範囲（google.maps.LatLngBoundsLiteral と互換）。 */
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
 /** InfoWindow の表示対象。クリックで開いた場合は pinned=true。 */
 export interface RegulationSelection {
   featureId: string;

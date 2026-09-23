@@ -110,6 +110,40 @@ describe("RegulationList", () => {
     expect(screen.getByText("該当する規制情報はありません。")).toBeTruthy();
   });
 
+  it("切り替え関数を渡したときだけ「地図の範囲のみ」を表示する", () => {
+    render(
+      <RegulationList
+        features={features}
+        selectedId={null}
+        isLoading={false}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("checkbox")).toBeNull();
+
+    cleanup();
+
+    const onRestrictToViewChange = vi.fn();
+    render(
+      <RegulationList
+        features={features}
+        selectedId={null}
+        isLoading={false}
+        restrictToView
+        onRestrictToViewChange={onRestrictToViewChange}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+
+    fireEvent.click(checkbox);
+    expect(onRestrictToViewChange).toHaveBeenCalledWith(false);
+  });
+
   it("閉じるボタンで onClose を呼ぶ", () => {
     const onClose = vi.fn();
     render(

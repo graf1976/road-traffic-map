@@ -10,6 +10,10 @@ import type { RegulationFeature, RegulationSelection } from "@/types/regulation"
 const envState = vi.hoisted(() => ({ hasKey: true }));
 /** useApiLoadingStatus の返り値。 */
 const apiState = vi.hoisted(() => ({ status: "LOADED" }));
+/** モックの Map が受け取った props（イベントを手動で発火させるために使う）。 */
+const mapProps = vi.hoisted(() => ({
+  current: null as Record<string, unknown> | null,
+}));
 
 vi.mock("@/lib/env", () => ({
   GOOGLE_MAPS_API_KEY: "test-key",
@@ -23,9 +27,10 @@ vi.mock("@vis.gl/react-google-maps", () => ({
   APIProvider: ({ children }: { children: ReactNode }) => (
     <div data-testid="api-provider">{children}</div>
   ),
-  Map: ({ children }: { children: ReactNode }) => (
-    <div data-testid="map">{children}</div>
-  ),
+  Map: (props: { children: ReactNode }) => {
+    mapProps.current = props as unknown as Record<string, unknown>;
+    return <div data-testid="map">{props.children}</div>;
+  },
   InfoWindow: ({ children }: { children: ReactNode }) => (
     <div data-testid="info-window">{children}</div>
   ),
@@ -93,6 +98,7 @@ function renderMap(overrides: Partial<Parameters<typeof RoadMap>[0]> = {}) {
 beforeEach(() => {
   envState.hasKey = true;
   apiState.status = "LOADED";
+  mapProps.current = null;
 });
 
 afterEach(() => {
@@ -146,6 +152,27 @@ describe("RoadMap", () => {
     renderMap();
 
     expect(screen.queryByTestId("marker")).toBeNull();
+  });
+
+  it("地図の操作が落ち着いたら表示範囲を知らせる", () => {
+    const onBoundsChange = vi.fn();
+    renderMap({ onBoundsChange });
+
+    const bounds = { north: 36, south: 35, east: 140, west: 139 };
+    const onIdle = mapProps.current?.onIdle as (event: unknown) => void;
+    onIdle({ map: { getBounds: () => ({ toJSON: () => bounds }) } });
+
+    expect(onBoundsChange).toHaveBeenCalledWith(bounds);
+  });
+
+  it("表示範囲を取得できないときは通知しない", () => {
+    const onBoundsChange = vi.fn();
+    renderMap({ onBoundsChange });
+
+    const onIdle = mapProps.current?.onIdle as (event: unknown) => void;
+    onIdle({ map: { getBounds: () => undefined } });
+
+    expect(onBoundsChange).not.toHaveBeenCalled();
   });
 
   it("API の読み込みに失敗したらエラーを重ねて表示する", () => {

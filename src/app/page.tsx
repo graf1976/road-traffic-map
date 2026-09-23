@@ -16,9 +16,14 @@ import {
 } from "@/hooks/useCurrentLocation";
 import { useRegulations } from "@/hooks/useRegulations";
 import { midpoint } from "@/lib/geo";
-import { countByStatus, filterByStatus } from "@/lib/regulation-filter";
+import {
+  countByStatus,
+  filterByBounds,
+  filterByStatus,
+} from "@/lib/regulation-filter";
 import {
   REGULATION_STATUSES,
+  type MapBounds,
   type RegulationFeature,
   type RegulationSelection,
   type RegulationStatus,
@@ -72,6 +77,9 @@ export default function Home() {
     ReadonlySet<RegulationStatus>
   >(() => new Set(REGULATION_STATUSES));
   const [isListOpen, setIsListOpen] = useState(true);
+  /** 地図が今表示している範囲。一覧を画面内の規制に絞るために使う。 */
+  const [bounds, setBounds] = useState<MapBounds | null>(null);
+  const [restrictToView, setRestrictToView] = useState(true);
   /** 「更新しました」を一時的に出すための時刻。 */
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
 
@@ -107,9 +115,16 @@ export default function Home() {
 
   const counts = useMemo(() => countByStatus(features), [features]);
 
+  /** 種別で絞り込んだ規制。地図には常にこれを描画する。 */
   const visibleFeatures = useMemo(
     () => filterByStatus(features, statusFilter),
     [features, statusFilter],
+  );
+
+  /** 一覧に出す規制。既定では地図に写っている範囲だけに絞る。 */
+  const listedFeatures = useMemo(
+    () => (restrictToView ? filterByBounds(visibleFeatures, bounds) : visibleFeatures),
+    [visibleFeatures, restrictToView, bounds],
   );
 
   const userPosition = useMemo(
@@ -182,7 +197,9 @@ export default function Home() {
       ? "規制情報の提供元が設定されていないため、表示できる情報がありません。"
       : source === "fallback"
         ? "規制情報を取得できませんでした。時間をおいて「今すぐ更新」をお試しください。"
-        : "該当する規制情報はありません。";
+        : restrictToView && visibleFeatures.length > 0
+          ? "この範囲に規制情報はありません。地図を動かすか、「地図の範囲のみ」のチェックを外してください。"
+          : "該当する規制情報はありません。";
 
   const handleAlertAction = useCallback(() => {
     clearError();
@@ -268,8 +285,8 @@ export default function Home() {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
             <span>規制情報の取得: {formatTime(generatedAt)}</span>
             <span>
-              表示中: {isLoading ? "読み込み中…" : `${visibleFeatures.length}件`}
-              {!isLoading && visibleFeatures.length !== features.length && (
+              一覧: {isLoading ? "読み込み中…" : `${listedFeatures.length}件`}
+              {!isLoading && listedFeatures.length !== features.length && (
                 <span className="text-slate-400">／全{features.length}件</span>
               )}
             </span>
@@ -346,6 +363,7 @@ export default function Home() {
             onCloseInfoWindow={closeInfoWindow}
             focus={focus}
             userPosition={userPosition}
+            onBoundsChange={setBounds}
           />
           <Legend />
           <LocateButton
@@ -358,10 +376,12 @@ export default function Home() {
         {isListOpen && (
           <div className="absolute inset-x-0 bottom-0 z-20 shadow-lg lg:static lg:z-auto lg:w-96 lg:shrink-0 lg:shadow-none">
             <RegulationList
-              features={visibleFeatures}
+              features={listedFeatures}
               selectedId={selection?.featureId ?? null}
               isLoading={isLoading}
               emptyMessage={emptyListMessage}
+              restrictToView={restrictToView}
+              onRestrictToViewChange={setRestrictToView}
               onSelect={handleListSelect}
               onClose={() => setIsListOpen(false)}
             />

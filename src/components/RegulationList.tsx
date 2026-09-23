@@ -16,6 +16,9 @@ interface RegulationListProps {
   isLoading: boolean;
   /** 表示できる規制が無いときの案内文。 */
   emptyMessage?: string;
+  /** 地図の範囲で絞り込んでいるか。切り替え関数を渡すと操作 UI を表示する。 */
+  restrictToView?: boolean;
+  onRestrictToViewChange?: (value: boolean) => void;
   onSelect: (feature: RegulationFeature) => void;
   onClose: () => void;
 }
@@ -26,6 +29,8 @@ export function RegulationList({
   selectedId,
   isLoading,
   emptyMessage = "該当する規制情報はありません。",
+  restrictToView = false,
+  onRestrictToViewChange,
   onSelect,
   onClose,
 }: RegulationListProps) {
@@ -41,13 +46,26 @@ export function RegulationList({
             {isLoading ? "読み込み中…" : `${features.length}件`}
           </span>
         </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100"
-        >
-          閉じる
-        </button>
+        <div className="flex items-center gap-2">
+          {onRestrictToViewChange && (
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={restrictToView}
+                onChange={(event) => onRestrictToViewChange(event.target.checked)}
+                className="h-3.5 w-3.5 accent-blue-600"
+              />
+              地図の範囲のみ
+            </label>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100"
+          >
+            閉じる
+          </button>
+        </div>
       </header>
 
       {features.length === 0 ? (

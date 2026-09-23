@@ -11,6 +11,7 @@ import {
   Pin,
   useApiLoadingStatus,
   useMap,
+  type MapEvent,
 } from "@vis.gl/react-google-maps";
 
 import { RegulationInfoContent } from "@/components/RegulationInfoContent";
@@ -26,6 +27,7 @@ import {
 } from "@/lib/env";
 import type {
   LatLng,
+  MapBounds,
   RegulationFeature,
   RegulationSelection,
 } from "@/types/regulation";
@@ -52,6 +54,8 @@ interface RoadMapProps {
   focus: MapFocus | null;
   /** 現在地（取得済みの場合のみピンを表示する）。 */
   userPosition: LatLng | null;
+  /** 地図の移動・拡大縮小が落ち着いたときに、表示範囲を知らせる。 */
+  onBoundsChange?: (bounds: MapBounds) => void;
 }
 
 /** focus が更新されたら地図の中心とズームを移動する。 */
@@ -128,6 +132,7 @@ export function RoadMap({
   onCloseInfoWindow,
   focus,
   userPosition,
+  onBoundsChange,
 }: RoadMapProps) {
   const selectedFeature = useMemo(
     () =>
@@ -141,6 +146,15 @@ export function RoadMap({
   const handleMapClick = useCallback(() => {
     onCloseInfoWindow();
   }, [onCloseInfoWindow]);
+
+  // 移動中は何度も発火させず、操作が落ち着いた時点の範囲だけを伝える。
+  const handleIdle = useCallback(
+    (event: MapEvent) => {
+      const bounds = event.map.getBounds()?.toJSON();
+      if (bounds) onBoundsChange?.(bounds);
+    },
+    [onBoundsChange],
+  );
 
   if (!hasGoogleMapsApiKey) {
     return <MissingApiKeyNotice />;
@@ -161,6 +175,7 @@ export function RoadMap({
           mapTypeControl={false}
           streetViewControl={false}
           onClick={handleMapClick}
+          onIdle={handleIdle}
         >
           <TrafficLayer />
           <RegulationLayer

@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { Legend } from "@/components/Legend";
+import { LocateButton } from "@/components/LocateButton";
 import type { MapFocus } from "@/components/Map";
 import type { RegulationHit } from "@/components/RegulationLayer";
 import { RegulationList } from "@/components/RegulationList";
@@ -71,6 +72,8 @@ export default function Home() {
     ReadonlySet<RegulationStatus>
   >(() => new Set(REGULATION_STATUSES));
   const [isListOpen, setIsListOpen] = useState(true);
+  /** 「更新しました」を一時的に出すための時刻。 */
+  const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
 
   const {
     features,
@@ -160,9 +163,22 @@ export default function Home() {
     setStatusFilter(new Set(REGULATION_STATUSES));
   }, []);
 
+  /** 手動更新。押したことが分かるよう、完了後に短くメッセージを出す。 */
+  const handleManualRefresh = useCallback(async () => {
+    await refresh();
+    setRefreshedAt(Date.now());
+  }, [refresh]);
+
+  useEffect(() => {
+    if (refreshedAt === null) return;
+
+    const timerId = window.setTimeout(() => setRefreshedAt(null), 3000);
+    return () => window.clearTimeout(timerId);
+  }, [refreshedAt]);
+
   const handleAlertAction = useCallback(() => {
     clearError();
-    if (error) refresh();
+    if (error) void refresh();
   }, [clearError, error, refresh]);
 
   return (
@@ -222,7 +238,7 @@ export default function Home() {
 
             <button
               type="button"
-              onClick={refresh}
+              onClick={() => void handleManualRefresh()}
               disabled={isValidating}
               className="rounded-md border border-slate-600 px-3 py-2 text-sm font-semibold transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -242,7 +258,7 @@ export default function Home() {
           />
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
-            <span>最終更新: {formatTime(generatedAt)}</span>
+            <span>規制情報の取得: {formatTime(generatedAt)}</span>
             <span>
               表示中: {isLoading ? "読み込み中…" : `${visibleFeatures.length}件`}
               {!isLoading && visibleFeatures.length !== features.length && (
@@ -252,9 +268,25 @@ export default function Home() {
             {remainingSeconds !== null && (
               <span>次回更新まで: 約{remainingSeconds}秒</span>
             )}
+            {refreshedAt !== null && (
+              <span
+                role="status"
+                className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800"
+              >
+                更新しました
+              </span>
+            )}
             {source === "mock" && (
-              <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
-                モックデータ表示中
+              <span
+                title="規制情報は動作確認用のサンプルです。更新しても内容は変わりません。渋滞状況（道路の色）は Google のリアルタイム情報です。"
+                className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500"
+              >
+                規制情報はサンプルデータ（内容は変わりません）
+              </span>
+            )}
+            {source === "live" && (
+              <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                実データ
               </span>
             )}
             {source === "fallback" && (
@@ -296,6 +328,11 @@ export default function Home() {
             userPosition={userPosition}
           />
           <Legend />
+          <LocateButton
+            onLocate={locate}
+            isLocating={isLocating}
+            hasPosition={userPosition !== null}
+          />
         </div>
 
         {isListOpen && (

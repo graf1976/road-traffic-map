@@ -29,8 +29,8 @@ export interface UseRegulationsResult {
   isLoading: boolean;
   isValidating: boolean;
   error: Error | null;
-  /** 手動で再取得する。 */
-  refresh: () => void;
+  /** 手動で再取得する。完了まで待てるよう Promise を返す。 */
+  refresh: () => Promise<void>;
 }
 
 /**
@@ -54,8 +54,8 @@ export function useRegulations(refreshIntervalMs: number): UseRegulationsResult 
     isLoading,
     isValidating,
     error: error ?? null,
-    refresh: () => {
-      void mutate();
+    refresh: async () => {
+      await mutate();
     },
   };
 }

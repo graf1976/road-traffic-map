@@ -12,10 +12,11 @@
 | ポップアップ | 黒い線のホバー／クリックで InfoWindow を表示（詳細説明＋詳細ページへのリンク） |
 | 規制情報一覧 | サイドパネル（モバイルはボトムシート）に一覧表示。項目を選ぶと該当区間へ地図が移動 |
 | 種別フィルタ | 通行止め／工事中／車線規制／チェーン規制で絞り込み。地図と一覧が連動 |
-| 現在地取得 | Geolocation API で現在地を取得し、地図の中心を移動＋ピンを表示 |
+| 現在地取得 | 地図上の現在地ボタン（とヘッダーのボタン）から現在地へ移動＋ピンを表示 |
 | 自動更新 | 更新なし（手動）／1 分／5 分／10 分 から選択。次回更新までの残り秒数も表示 |
 | 凡例 | 地図上に色の意味を常時表示 |
 | エラー表示 | 位置情報の失敗・API 取得失敗・API キー未設定・描画エラーをそれぞれ画面上で案内 |
+| ホーム画面に追加 | Web アプリマニフェストとサービスワーカーを備え、スマートフォンのホーム画面にアプリとして追加できる |
 
 ## セットアップ
 
@@ -79,18 +80,22 @@ npm run build        # 本番ビルド
 src/
 ├── app/
 │   ├── api/regulations/route.ts   規制情報を返す API（GeoJSON）
+│   ├── apple-icon.png             iOS のホーム画面用アイコン
 │   ├── error.tsx                  ページ内エラーのフォールバック
 │   ├── global-error.tsx           ルートレイアウトごと失敗した場合の表示
 │   ├── globals.css
 │   ├── icon.svg                   ファビコン
 │   ├── layout.tsx
+│   ├── manifest.ts                Web アプリマニフェスト（ホーム画面追加用）
 │   └── page.tsx                   ヘッダー・フィルタ・一覧・地図の組み立て
 ├── components/
 │   ├── Legend.tsx                 凡例
+│   ├── LocateButton.tsx           地図上の現在地ボタン
 │   ├── Map.tsx                    地図本体（APIProvider / Traffic / 規制 / InfoWindow）
 │   ├── RegulationInfoContent.tsx  InfoWindow の中身
 │   ├── RegulationLayer.tsx        規制情報のポリライン描画
 │   ├── RegulationList.tsx         規制情報一覧パネル
+│   ├── ServiceWorkerRegistration.tsx  サービスワーカーの登録
 │   ├── StatusFilter.tsx           種別フィルタ
 │   └── TrafficLayer.tsx           渋滞レイヤー
 ├── hooks/
@@ -139,6 +144,31 @@ src/
 `source` は `mock`（ダミーデータ）／`live`（実データ）／`fallback`（実データ取得に失敗して
 代替表示中）のいずれかで、画面上部のバッジに反映されます。
 
+## 表示データについて（重要）
+
+| 画面の要素 | データ | 更新 |
+| --- | --- | --- |
+| 道路の色（緑・オレンジ・赤） | **Google のリアルタイム渋滞情報** | 地図が自動で更新 |
+| 黒い線（通行止め・規制） | **サンプルデータ（8件）** | 内容は変わらない |
+
+黒い線の規制情報は動作確認用のサンプルです。「今すぐ更新」を押すと API を取得し直して
+取得時刻は変わりますが、**接続先がサンプルのままなので内容は変化しません**。
+画面には「規制情報はサンプルデータ（内容は変わりません）」と表示されます。
+
+実際の規制情報に切り替えるには `REGULATION_SOURCE_URL` に GeoJSON を返すエンドポイントを
+設定します（次節）。なお、全国の通行止め情報をリアルタイムで返す、登録不要の公開 API は
+執筆時点で見つかっていません。候補は次のとおりです。
+
+- [JARTIC 交通情報オープンデータ](https://www.jartic.or.jp/service/opendata/) …
+  交通量・旅行時間などを無料で提供（利用規約への同意が必要）
+- [国土交通省 xROAD / 交通量 API](https://www.mlit.go.jp/report/press/road01_hh_001930.html) …
+  直轄国道の交通量データ
+- 自治体の道路規制 API（例: 静岡市「しずみち info」）… 地域単位で GeoJSON を公開
+- 各地方整備局の[道路情報提供システム](https://www.road-info-prvs.mlit.go.jp/) … Web 画面での提供
+
+いずれも形式が異なるため、[`regulation-normalize.ts`](src/lib/regulation-normalize.ts) の
+変換処理に合わせて調整してください。
+
 ## 実データへの差し替え
 
 `REGULATION_SOURCE_URL` に GeoJSON を返すエンドポイント（国土交通省などのオープンデータ）を
@@ -159,6 +189,17 @@ src/
 - `http(s)` 以外のリンク（`javascript:` など）は表示しない
 
 区分の対応表は `STATUS_ALIASES` に追記するだけで拡張できます。
+
+## メンテナンス用スクリプト
+
+```bash
+node scripts/generate-mock-geometry.mjs   # サンプル規制データの線形を生成
+node scripts/generate-icons.mjs           # ホーム画面用アイコンを生成
+```
+
+規制区間の線は、手書きの座標だと地図上の道路からずれてしまうため、
+OpenStreetMap ベースの経路探索（OSRM）で取得した**実際の道路形状**から生成しています。
+生成結果は `src/lib/mock-regulations.ts` にコミット済みなので、通常は実行不要です。
 
 ## テスト
 

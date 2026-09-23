@@ -53,13 +53,25 @@ afterEach(() => {
 });
 
 describe("loadRegulations", () => {
-  it("取得元が未設定ならモックデータを返す", async () => {
+  it("取得元が未設定なら何も返さない（誤った規制を表示しないため）", async () => {
     vi.stubEnv("REGULATION_SOURCE_URL", "");
+    vi.stubEnv("REGULATION_USE_SAMPLE", "");
     const { loadRegulations } = await importSource();
 
     const result = await loadRegulations();
 
-    expect(result.source).toBe("mock");
+    expect(result.source).toBe("unconfigured");
+    expect(result.features).toEqual([]);
+  });
+
+  it("見本データは環境変数で明示的に有効にしたときだけ返す", async () => {
+    vi.stubEnv("REGULATION_SOURCE_URL", "");
+    vi.stubEnv("REGULATION_USE_SAMPLE", "true");
+    const { loadRegulations } = await importSource();
+
+    const result = await loadRegulations();
+
+    expect(result.source).toBe("sample");
     expect(result.features.length).toBeGreaterThan(0);
   });
 
@@ -97,16 +109,18 @@ describe("loadRegulations", () => {
     expect(second.source).toBe("live");
   });
 
-  it("上流APIが失敗したらモックデータにフォールバックする", async () => {
+  it("上流APIが失敗し、直近の取得も無ければ空を返す", async () => {
     vi.stubEnv("REGULATION_SOURCE_URL", SOURCE_URL);
+    vi.stubEnv("REGULATION_USE_SAMPLE", "true");
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const { loadRegulations } = await importSource();
     const result = await loadRegulations();
 
+    // 見本データで穴埋めしない（実際には通れる道路を通行止めと誤認させないため）。
     expect(result.source).toBe("fallback");
-    expect(result.features.length).toBeGreaterThan(0);
+    expect(result.features).toEqual([]);
     expect(warn).toHaveBeenCalled();
   });
 

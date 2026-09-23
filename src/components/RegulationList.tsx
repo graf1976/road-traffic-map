@@ -14,6 +14,8 @@ interface RegulationListProps {
   features: RegulationFeature[];
   selectedId: string | null;
   isLoading: boolean;
+  /** 表示できる規制が無いときの案内文。 */
+  emptyMessage?: string;
   onSelect: (feature: RegulationFeature) => void;
   onClose: () => void;
 }
@@ -23,6 +25,7 @@ export function RegulationList({
   features,
   selectedId,
   isLoading,
+  emptyMessage = "該当する規制情報はありません。",
   onSelect,
   onClose,
 }: RegulationListProps) {
@@ -49,9 +52,7 @@ export function RegulationList({
 
       {features.length === 0 ? (
         <p className="px-4 py-6 text-center text-xs text-slate-500">
-          {isLoading
-            ? "規制情報を読み込んでいます…"
-            : "該当する規制情報はありません。"}
+          {isLoading ? "規制情報を読み込んでいます…" : emptyMessage}
         </p>
       ) : (
         <ul className="min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto">

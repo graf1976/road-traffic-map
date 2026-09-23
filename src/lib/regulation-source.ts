@@ -12,6 +12,12 @@ import type {
  */
 const SOURCE_URL: string = process.env.REGULATION_SOURCE_URL?.trim() ?? "";
 
+/**
+ * 見本データを表示してよいかどうか（開発用）。
+ * 実際には通れる道路を「通行止め」と誤認させないため、既定では表示しない。
+ */
+const USE_SAMPLE: boolean = process.env.REGULATION_USE_SAMPLE === "true";
+
 /** 上流APIへの問い合わせ間隔の下限（ミリ秒）。 */
 const CACHE_TTL_MS = 60_000;
 
@@ -64,14 +70,17 @@ async function fetchFromSource(url: string): Promise<RegulationFeature[]> {
 /**
  * 規制情報を取得する。
  *
- * 1. `REGULATION_SOURCE_URL` 未設定 → モックデータ
+ * 1. `REGULATION_SOURCE_URL` 未設定 → 空（source: "unconfigured"）
+ *    ただし `REGULATION_USE_SAMPLE=true` のときだけ見本データ（source: "sample"）
  * 2. キャッシュが新しい → キャッシュ
  * 3. 上流APIを取得 → 正規化してキャッシュ
- * 4. 失敗 → 直近のキャッシュ、無ければモックデータ（source: "fallback"）
+ * 4. 失敗 → 直近のキャッシュ、無ければ空（source: "fallback"）
  */
 export async function loadRegulations(): Promise<RegulationLoadResult> {
   if (!SOURCE_URL) {
-    return { features: MOCK_REGULATION_FEATURES, source: "mock" };
+    return USE_SAMPLE
+      ? { features: MOCK_REGULATION_FEATURES, source: "sample" }
+      : { features: [], source: "unconfigured" };
   }
 
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
@@ -85,9 +94,8 @@ export async function loadRegulations(): Promise<RegulationLoadResult> {
   } catch (error) {
     console.warn("[regulations] 上流APIの取得に失敗しました:", error);
 
-    return {
-      features: cache?.features ?? MOCK_REGULATION_FEATURES,
-      source: "fallback",
-    };
+    // 取得できなかったときに見本データで穴埋めしない。
+    // 古い情報でも「直前に実際に取得できた内容」だけを出す。
+    return { features: cache?.features ?? [], source: "fallback" };
   }
 }

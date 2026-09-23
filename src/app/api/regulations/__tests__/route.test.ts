@@ -15,18 +15,19 @@ describe("GET /api/regulations", () => {
 
     expect(response.status).toBe(200);
     expect(body.type).toBe("FeatureCollection");
-    expect(body.features.length).toBeGreaterThan(0);
+    expect(Array.isArray(body.features)).toBe(true);
     expect(Number.isNaN(new Date(body.generatedAt).getTime())).toBe(false);
   });
 
-  it("取得元が未設定のときはモックデータを返す", async () => {
+  it("取得元が未設定のときは規制を返さない", async () => {
     const response = await GET();
     const body = (await response.json()) as RegulationCollection;
 
-    expect(body.source).toBe("mock");
+    expect(body.source).toBe("unconfigured");
+    expect(body.features).toEqual([]);
   });
 
-  it("すべての Feature が描画に必要な形を満たす", async () => {
+  it("返す Feature は描画に必要な形を満たす", async () => {
     const response = await GET();
     const body = (await response.json()) as RegulationCollection;
 

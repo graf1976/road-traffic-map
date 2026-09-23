@@ -21,8 +21,19 @@ export const REGULATION_STATUS_LABEL: Record<RegulationStatus, string> = {
   chain_required: "チェーン規制",
 };
 
-/** データの取得元。UI で「モック表示中」などを案内するために使う。 */
-export type RegulationSourceKind = "mock" | "live" | "fallback";
+/**
+ * 規制情報の取得元。
+ *
+ * - unconfigured: 提供元が未設定。実際の規制が分からないため何も表示しない。
+ * - live: 実データを取得できた。
+ * - fallback: 提供元はあるが取得に失敗した（直前に取得できていればその内容）。
+ * - sample: 開発用の見本データ（環境変数で明示的に有効化したときだけ）。
+ */
+export type RegulationSourceKind =
+  | "unconfigured"
+  | "live"
+  | "fallback"
+  | "sample";
 
 /** GeoJSON の座標は [経度, 緯度] の順。 */
 export type Position = [longitude: number, latitude: number];

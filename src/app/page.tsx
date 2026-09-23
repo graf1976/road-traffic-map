@@ -176,6 +176,14 @@ export default function Home() {
     return () => window.clearTimeout(timerId);
   }, [refreshedAt]);
 
+  /** 一覧が空のときに出す案内文。理由によって書き分ける。 */
+  const emptyListMessage =
+    source === "unconfigured"
+      ? "規制情報の提供元が設定されていないため、表示できる情報がありません。"
+      : source === "fallback"
+        ? "規制情報を取得できませんでした。時間をおいて「今すぐ更新」をお試しください。"
+        : "該当する規制情報はありません。";
+
   const handleAlertAction = useCallback(() => {
     clearError();
     if (error) void refresh();
@@ -276,25 +284,37 @@ export default function Home() {
                 更新しました
               </span>
             )}
-            {source === "mock" && (
-              <span
-                title="規制情報は動作確認用のサンプルです。更新しても内容は変わりません。渋滞状況（道路の色）は Google のリアルタイム情報です。"
-                className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500"
-              >
-                規制情報はサンプルデータ（内容は変わりません）
-              </span>
-            )}
             {source === "live" && (
               <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
                 実データ
               </span>
             )}
+            {source === "unconfigured" && (
+              <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+                規制情報は未接続
+              </span>
+            )}
             {source === "fallback" && (
               <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                実データ取得に失敗したため代替データを表示中
+                規制情報を取得できませんでした
+              </span>
+            )}
+            {source === "sample" && (
+              <span
+                title="開発用の見本データです。実際の規制ではありません。"
+                className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+              >
+                見本データ（開発用）
               </span>
             )}
           </div>
+
+          {source === "unconfigured" && (
+            <p className="text-xs leading-relaxed text-slate-500">
+              通行止め・規制情報の提供元が未設定のため、黒い線は表示されません。
+              道路の色（緑・オレンジ・赤）は Google のリアルタイム渋滞情報です。
+            </p>
+          )}
         </div>
       </div>
 
@@ -341,6 +361,7 @@ export default function Home() {
               features={visibleFeatures}
               selectedId={selection?.featureId ?? null}
               isLoading={isLoading}
+              emptyMessage={emptyListMessage}
               onSelect={handleListSelect}
               onClose={() => setIsListOpen(false)}
             />

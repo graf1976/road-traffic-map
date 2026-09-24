@@ -225,6 +225,10 @@ export default function Home() {
       url.searchParams.set("lng", point.lng.toFixed(5));
       if (zoom !== null) url.searchParams.set("zoom", String(Math.round(zoom)));
 
+      // 指でのタップはマウスよりずれるため、判定を広げてもらう。
+      const isTouch = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+      url.searchParams.set("precision", isTouch ? "coarse" : "fine");
+
       try {
         const response = await fetch(url);
         if (!response.ok) return;
@@ -252,7 +256,7 @@ export default function Home() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-lg font-bold sm:text-xl">全国道路状況マップ</h1>
-            <p className="text-xs text-slate-300">
+            <p className="hidden text-xs text-slate-300 sm:block">
               渋滞状況と通行止め・規制情報をまとめて確認できます
             </p>
           </div>
@@ -316,21 +320,25 @@ export default function Home() {
 
       <div className="z-10 border-b border-slate-200 bg-white px-4 py-2">
         <div className="mx-auto w-full max-w-7xl space-y-2">
-          <StatusFilter
-            selected={statusFilter}
-            counts={counts}
-            onToggle={toggleStatus}
-            onSelectAll={selectAllStatuses}
-          />
+          {features.length > 0 && (
+            <StatusFilter
+              selected={statusFilter}
+              counts={counts}
+              onToggle={toggleStatus}
+              onSelectAll={selectAllStatuses}
+            />
+          )}
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
-            <span>規制情報の取得: {formatTime(generatedAt)}</span>
-            <span>
-              一覧: {isLoading ? "読み込み中…" : `${listedFeatures.length}件`}
-              {!isLoading && listedFeatures.length !== features.length && (
-                <span className="text-slate-400">／全{features.length}件</span>
-              )}
-            </span>
+            <span>更新: {formatTime(generatedAt)}</span>
+            {features.length > 0 && (
+              <span>
+                一覧: {isLoading ? "読み込み中…" : `${listedFeatures.length}件`}
+                {!isLoading && listedFeatures.length !== features.length && (
+                  <span className="text-slate-400">／全{features.length}件</span>
+                )}
+              </span>
+            )}
             {remainingSeconds !== null && (
               <span>次回更新まで: 約{remainingSeconds}秒</span>
             )}
@@ -348,7 +356,10 @@ export default function Home() {
               </span>
             )}
             {source === "unconfigured" && (
-              <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+              <span
+                title="通行止め・規制情報の提供元が未設定のため、黒い線は表示されません。道路の色（渋滞状況）は Google のリアルタイム情報です。"
+                className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500"
+              >
                 規制情報は未接続
               </span>
             )}
@@ -367,13 +378,6 @@ export default function Home() {
             )}
           </div>
 
-          {source === "unconfigured" && (
-            <p className="text-xs leading-relaxed text-slate-500">
-              通行止め・規制情報の提供元が未設定のため、黒い線は表示されません。
-              道路の色（緑・オレンジ・赤）は Google のリアルタイム渋滞情報で、
-              「今すぐ更新」を押すとその場で取り直します。
-            </p>
-          )}
         </div>
       </div>
 
@@ -419,7 +423,7 @@ export default function Home() {
         </div>
 
         {isListOpen && (
-          <div className="absolute inset-x-0 bottom-0 z-20 flex max-h-[60vh] flex-col bg-white shadow-lg lg:static lg:z-auto lg:h-full lg:max-h-none lg:w-96 lg:shrink-0 lg:shadow-none">
+          <div className="absolute inset-x-0 bottom-0 z-20 flex max-h-[42vh] flex-col bg-white shadow-lg lg:static lg:z-auto lg:h-full lg:max-h-none lg:w-96 lg:shrink-0 lg:shadow-none">
             <RegulationList
               features={listedFeatures}
               selectedId={selection?.featureId ?? null}

@@ -70,6 +70,21 @@ describe("GET /api/road", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("指でのタップはマウスより判定を広げる", async () => {
+    // ズーム16で 60m 離れた道路：マウスでは対象外、タップでは対象になる。
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(nearestResponse("国道1号", 60)));
+
+    const mouse = (await (
+      await GET(request("?lat=35&lng=139&zoom=16&precision=fine"))
+    ).json()) as RoadLookupResult;
+    expect(mouse.name).toBeNull();
+
+    const touch = (await (
+      await GET(request("?lat=35&lng=139&zoom=16&precision=coarse"))
+    ).json()) as RoadLookupResult;
+    expect(touch.name).toBe("国道1号");
+  });
+
   it("座標が不正なら 400 を返す", async () => {
     const response = await GET(request("?lat=abc&lng=139"));
 

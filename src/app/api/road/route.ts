@@ -10,14 +10,21 @@ const NEAREST_ENDPOINT = "https://router.project-osrm.org/nearest/v1/driving";
 const FETCH_TIMEOUT_MS = 5_000;
 
 /**
- * 「その道路を指した」とみなす距離の下限・上限（メートル）。
+ * 「その道路を指した」とみなす距離の上限（メートル）。
  * 地図は縮尺で 1 ピクセルあたりの距離が変わるため、ズームから計算する。
  */
-const MIN_SNAP_DISTANCE_M = 30;
 const MAX_SNAP_DISTANCE_M = 400;
 
-/** 画面上でこのピクセル数だけ離れていても、その道路を指したとみなす。 */
-const SNAP_TOLERANCE_PX = 8;
+/**
+ * 指す精度は入力方法で大きく違う。
+ * 指でのタップはマウスより数倍ずれるため、判定を広げないと反応しない。
+ */
+const POINTER_PRECISION = {
+  fine: { tolerancePx: 12, minDistanceM: 30 },
+  coarse: { tolerancePx: 28, minDistanceM: 70 },
+} as const;
+
+type PointerPrecision = keyof typeof POINTER_PRECISION;
 
 /**
  * 近い順にいくつ候補を見るか。
@@ -49,9 +56,14 @@ export function resetRoadCache(): void {
   cache.clear();
 }
 
-/** 約 10m 四方＋ズード単位でまとめてキャッシュする。 */
-function cacheKey(lat: number, lng: number, zoom: number | null): string {
-  return `${lat.toFixed(4)},${lng.toFixed(4)},${zoom ?? "-"}`;
+/** 約 10m 四方＋ズーム＋入力方法の単位でまとめてキャッシュする。 */
+function cacheKey(
+  lat: number,
+  lng: number,
+  zoom: number | null,
+  precision: PointerPrecision,
+): string {
+  return `${lat.toFixed(4)},${lng.toFixed(4)},${zoom ?? "-"},${precision}`;
 }
 
 function readCache(key: string): RoadLookupResult | null {
@@ -88,15 +100,21 @@ function parseCoordinate(value: string | null, limit: number): number | null {
  * 画面の見た目の距離を実際の距離に直す。
  * ズームが小さい（広域）ほど 1 ピクセルが表す距離は長くなる。
  */
-function snapDistanceFor(lat: number, zoom: number | null): number {
-  if (zoom === null) return MIN_SNAP_DISTANCE_M * 2;
+function snapDistanceFor(
+  lat: number,
+  zoom: number | null,
+  precision: PointerPrecision,
+): number {
+  const { tolerancePx, minDistanceM } = POINTER_PRECISION[precision];
+
+  if (zoom === null) return minDistanceM * 2;
 
   const metersPerPixel =
     (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
 
   return Math.min(
     MAX_SNAP_DISTANCE_M,
-    Math.max(MIN_SNAP_DISTANCE_M, metersPerPixel * SNAP_TOLERANCE_PX),
+    Math.max(minDistanceM, metersPerPixel * tolerancePx),
   );
 }
 
@@ -135,7 +153,7 @@ async function lookupRoadName(
 /**
  * 指定した地点の道路名と、その管理者へのリンクを返す。
  *
- *   GET /api/road?lat=35.68&lng=139.76&zoom=14
+ *   GET /api/road?lat=35.68&lng=139.76&zoom=14&precision=coarse
  *
  * 道路名は OpenStreetMap（OSRM 経由）から取得する。分からない場合も
  * エラーにはせず name: null を返し、画面側は何も出さない。
@@ -159,14 +177,21 @@ export async function GET(request: Request): Promise<NextResponse<RoadLookupResu
       ? Math.round(parsedZoom)
       : null;
 
-  const key = cacheKey(lat, lng, zoom);
+  const precision: PointerPrecision =
+    params.get("precision") === "coarse" ? "coarse" : "fine";
+
+  const key = cacheKey(lat, lng, zoom, precision);
   const cached = readCache(key);
   if (cached) {
     return NextResponse.json(cached, { headers: { "Cache-Control": "no-store" } });
   }
 
   try {
-    const name = await lookupRoadName(lat, lng, snapDistanceFor(lat, zoom));
+    const name = await lookupRoadName(
+      lat,
+      lng,
+      snapDistanceFor(lat, zoom, precision),
+    );
     const result: RoadLookupResult = { name, operator: findRoadOperator(name) };
 
     writeCache(key, result);

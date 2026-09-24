@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SWRConfig } from "swr";
+
 import Home from "@/app/page";
 import type { MapBounds, RegulationCollection } from "@/types/regulation";
 
@@ -44,6 +46,15 @@ vi.mock("@/components/Map", () => ({
   DEFAULT_CENTER: { lat: 35.6812, lng: 139.7671 },
   DEFAULT_ZOOM: 9,
 }));
+
+/** テストごとに SWR のキャッシュを分け、前のテストの取得結果を持ち越さない。 */
+function renderHome() {
+  return render(
+    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+      <Home />
+    </SWRConfig>,
+  );
+}
 
 function makeFeature(id: string, roadName: string, coordinates: [number, number][]) {
   return {
@@ -108,9 +119,32 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("規制情報が無いとき", () => {
+  it("種別フィルタや長い説明文を出さず、地図の表示を広く保つ", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...collection,
+          source: "unconfigured",
+          features: [],
+        }),
+      }),
+    );
+
+    renderHome();
+
+    expect(await screen.findByText("規制情報は未接続")).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: /通行止め/ })).toBeNull();
+    expect(screen.queryByText(/黒い線は表示されません/)).toBeNull();
+  });
+});
+
 describe("トップページの一覧", () => {
   it("地図の表示範囲に合わせて一覧の件数が変わる", async () => {
-    render(<Home />);
+    renderHome();
 
     // 範囲が未取得のうちは全件を出す。
     expect(await screen.findByText("関東の道路")).toBeTruthy();
@@ -132,7 +166,7 @@ describe("トップページの一覧", () => {
   });
 
   it("道路を指すと道路名と管理会社のリンクを出す", async () => {
-    render(<Home />);
+    renderHome();
     expect(await screen.findByText("関東の道路")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "道路を指す" }));
@@ -143,7 +177,7 @@ describe("トップページの一覧", () => {
   });
 
   it("「地図の範囲のみ」を外すと全件表示に戻る", async () => {
-    render(<Home />);
+    renderHome();
     expect(await screen.findByText("関東の道路")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "九州を表示" }));
@@ -160,7 +194,7 @@ describe("トップページの一覧", () => {
   });
 
   it("公式サイトの案内も地図の範囲に追従する", async () => {
-    render(<Home />);
+    renderHome();
     expect(await screen.findByText("関東の道路")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "関東を表示" }));
@@ -177,7 +211,7 @@ describe("トップページの一覧", () => {
   });
 
   it("範囲内に規制が無いときは地図を動かすよう案内する", async () => {
-    render(<Home />);
+    renderHome();
     expect(await screen.findByText("関東の道路")).toBeTruthy();
 
     // 何も無い海上あたりを表示する想定で、九州→関東の順に切り替える。

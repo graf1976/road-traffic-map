@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
-import { InstallButton } from "@/components/InstallButton";
 import { Legend } from "@/components/Legend";
 import { LocateButton } from "@/components/LocateButton";
 import { OfficialLinks } from "@/components/OfficialLinks";
@@ -54,7 +53,7 @@ interface RefreshOption {
 }
 
 const REFRESH_OPTIONS: readonly RefreshOption[] = [
-  { label: "更新なし（手動）", value: 0 },
+  { label: "自動更新なし", value: 0 },
   { label: "1分ごと", value: 60_000 },
   { label: "5分ごと", value: 300_000 },
   { label: "10分ごと", value: 600_000 },
@@ -253,30 +252,34 @@ export default function Home() {
 
   return (
     <main className="flex h-dvh flex-col bg-slate-100">
-      <header className="z-20 bg-slate-900 px-4 py-3 text-white shadow-md">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-lg font-bold sm:text-xl">全国道路状況マップ</h1>
+      <header className="z-20 bg-slate-900 px-4 py-2.5 text-white shadow-md">
+        {/*
+          スマホ: 1段目＝タイトルと「今すぐ更新」、2段目＝残りの操作（計2段）。
+          パソコン: すべて1段に並べる。並び順は order で入れ替えている。
+        */}
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-2 gap-y-2">
+          <div className="mr-auto min-w-0">
+            <h1 className="truncate text-lg font-bold sm:text-xl">全国道路状況マップ</h1>
             <p className="hidden text-xs text-slate-300 sm:block">
               渋滞状況と通行止め・規制情報をまとめて確認できます
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <InstallButton />
-            <button
-              type="button"
-              onClick={locate}
-              disabled={isLocating}
-              className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold transition hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isLocating ? "取得中…" : "現在地を取得"}
-            </button>
+          <button
+            type="button"
+            onClick={() => void handleManualRefresh()}
+            disabled={isValidating}
+            title="渋滞状況と規制情報をその場で取り直します"
+            className="order-2 shrink-0 rounded-md border border-slate-600 px-3 py-2 text-sm font-semibold transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-60 lg:order-last"
+          >
+            {isValidating ? "更新中…" : "今すぐ更新"}
+          </button>
 
+          <div className="order-3 flex w-full items-center gap-2 lg:order-2 lg:w-auto">
             <button
               type="button"
               onClick={showJapanOverview}
-              className="rounded-md bg-slate-700 px-3 py-2 text-sm font-semibold transition hover:bg-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              className="shrink-0 rounded-md bg-slate-700 px-3 py-2 text-sm font-semibold transition hover:bg-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             >
               全国表示
             </button>
@@ -285,19 +288,22 @@ export default function Home() {
               type="button"
               onClick={() => setIsListOpen((open) => !open)}
               aria-pressed={isListOpen}
-              className="rounded-md bg-slate-700 px-3 py-2 text-sm font-semibold transition hover:bg-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              className="shrink-0 rounded-md bg-slate-700 px-3 py-2 text-sm font-semibold transition hover:bg-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             >
               {isListOpen ? "一覧を隠す" : "一覧を表示"}
             </button>
 
-            <label className="flex items-center gap-2 text-sm">
-              <span className="whitespace-nowrap text-slate-300">更新間隔</span>
+            <label className="flex min-w-0 items-center gap-2 text-sm">
+              {/* スマホでは幅を節約するため見出しを読み上げ専用にする */}
+              <span className="sr-only whitespace-nowrap text-slate-300 sm:not-sr-only">
+                更新間隔
+              </span>
               <select
                 value={refreshIntervalMs}
                 onChange={(event) =>
                   setRefreshIntervalMs(Number(event.target.value))
                 }
-                className="rounded-md border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                className="min-w-0 rounded-md border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
               >
                 {REFRESH_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -306,16 +312,6 @@ export default function Home() {
                 ))}
               </select>
             </label>
-
-            <button
-              type="button"
-              onClick={() => void handleManualRefresh()}
-              disabled={isValidating}
-              title="渋滞状況と規制情報をその場で取り直します"
-              className="rounded-md border border-slate-600 px-3 py-2 text-sm font-semibold transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isValidating ? "更新中…" : "今すぐ更新"}
-            </button>
           </div>
         </div>
       </header>

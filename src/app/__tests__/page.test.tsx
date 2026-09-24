@@ -142,6 +142,18 @@ describe("規制情報が無いとき", () => {
   });
 });
 
+describe("ヘッダー", () => {
+  it("ホーム画面追加と現在地取得のボタンは置かず、現在地は地図上のボタンで行う", async () => {
+    renderHome();
+    expect(await screen.findByText("関東の道路")).toBeTruthy();
+
+    expect(screen.queryByRole("button", { name: /ホーム画面に追加/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "現在地を取得" })).toBeNull();
+    expect(screen.getByRole("button", { name: "現在地を表示" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "今すぐ更新" })).toBeTruthy();
+  });
+});
+
 describe("トップページの一覧", () => {
   it("地図の表示範囲に合わせて一覧の件数が変わる", async () => {
     renderHome();

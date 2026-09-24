@@ -373,7 +373,7 @@ export default function Home() {
             onBoundsChange={setBounds}
             trafficRefreshKey={generatedAt?.getTime() ?? 0}
           />
-          <Legend />
+          <Legend hasRegulations={visibleFeatures.length > 0} />
           <LocateButton
             onLocate={locate}
             isLocating={isLocating}

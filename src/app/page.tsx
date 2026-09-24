@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { Legend } from "@/components/Legend";
 import { LocateButton } from "@/components/LocateButton";
 import { OfficialLinks } from "@/components/OfficialLinks";
+import { RoadHint } from "@/components/RoadHint";
 import type { MapFocus } from "@/components/Map";
 import type { RegulationHit } from "@/components/RegulationLayer";
 import { RegulationList } from "@/components/RegulationList";
@@ -23,8 +24,10 @@ import {
   filterByBounds,
   filterByStatus,
 } from "@/lib/regulation-filter";
+import type { RoadLookupResult } from "@/app/api/road/route";
 import {
   REGULATION_STATUSES,
+  type LatLng,
   type MapBounds,
   type RegulationFeature,
   type RegulationSelection,
@@ -84,6 +87,8 @@ export default function Home() {
   const [restrictToView, setRestrictToView] = useState(true);
   /** 「更新しました」を一時的に出すための時刻。 */
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
+  /** 地図で指している道路。分からないときは null。 */
+  const [road, setRoad] = useState<RoadLookupResult | null>(null);
 
   const {
     features,
@@ -205,6 +210,36 @@ export default function Home() {
         : restrictToView && visibleFeatures.length > 0
           ? "この範囲に規制情報はありません。地図を動かすか、「地図の範囲のみ」のチェックを外してください。"
           : "該当する規制情報はありません。";
+
+  /** 古い問い合わせの結果で上書きしないための番号。 */
+  const roadRequestId = useRef(0);
+
+  /** 指した地点の道路名を調べる。分からなければ何も出さない。 */
+  const handlePointerPoint = useCallback(
+    async (point: LatLng, zoom: number | null) => {
+      const requestId = roadRequestId.current + 1;
+      roadRequestId.current = requestId;
+
+      const url = new URL("/api/road", window.location.origin);
+      url.searchParams.set("lat", point.lat.toFixed(5));
+      url.searchParams.set("lng", point.lng.toFixed(5));
+      if (zoom !== null) url.searchParams.set("zoom", String(Math.round(zoom)));
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return;
+
+        const result = (await response.json()) as RoadLookupResult;
+
+        // 問い合わせている間にカーソルが動いていたら捨てる。
+        if (requestId !== roadRequestId.current) return;
+        setRoad(result.name ? result : null);
+      } catch {
+        // 道路名は補助的な情報なので、取れなければ黙って出さない。
+      }
+    },
+    [],
+  );
 
   const handleAlertAction = useCallback(() => {
     clearError();
@@ -372,8 +407,10 @@ export default function Home() {
             userPosition={userPosition}
             onBoundsChange={setBounds}
             trafficRefreshKey={generatedAt?.getTime() ?? 0}
+            onPointerPoint={(point, zoom) => void handlePointerPoint(point, zoom)}
           />
           <Legend hasRegulations={visibleFeatures.length > 0} />
+          {road?.name && <RoadHint name={road.name} operator={road.operator} />}
           <LocateButton
             onLocate={locate}
             isLocating={isLocating}

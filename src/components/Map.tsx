@@ -12,6 +12,7 @@ import {
   useApiLoadingStatus,
   useMap,
   type MapEvent,
+  type MapMouseEvent,
 } from "@vis.gl/react-google-maps";
 
 import { RegulationInfoContent } from "@/components/RegulationInfoContent";
@@ -58,6 +59,11 @@ interface RoadMapProps {
   onBoundsChange?: (bounds: MapBounds) => void;
   /** 値が変わると渋滞レイヤーを取り直す。 */
   trafficRefreshKey?: number;
+  /**
+   * カーソルを合わせた（スマートフォンではタップした）地点を知らせる。
+   * 動かしている間は呼ばず、止まってから一度だけ呼ぶ。
+   */
+  onPointerPoint?: (point: LatLng, zoom: number | null) => void;
 }
 
 /** focus が更新されたら地図の中心とズームを移動する。 */
@@ -136,6 +142,7 @@ export function RoadMap({
   userPosition,
   onBoundsChange,
   trafficRefreshKey,
+  onPointerPoint,
 }: RoadMapProps) {
   const selectedFeature = useMemo(
     () =>
@@ -146,9 +153,43 @@ export function RoadMap({
     [features, selection],
   );
 
-  const handleMapClick = useCallback(() => {
-    onCloseInfoWindow();
-  }, [onCloseInfoWindow]);
+  /** カーソルが止まってから問い合わせるための待ち時間（ミリ秒）。 */
+  const pointerTimer = useRef<number | null>(null);
+
+  const cancelPointerTimer = useCallback(() => {
+    if (pointerTimer.current !== null) {
+      window.clearTimeout(pointerTimer.current);
+      pointerTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => cancelPointerTimer, [cancelPointerTimer]);
+
+  const handleMouseMove = useCallback(
+    (event: MapMouseEvent) => {
+      const point = event.detail.latLng;
+      if (!point || !onPointerPoint) return;
+
+      const zoom = event.map.getZoom() ?? null;
+      cancelPointerTimer();
+      pointerTimer.current = window.setTimeout(() => onPointerPoint(point, zoom), 450);
+    },
+    [cancelPointerTimer, onPointerPoint],
+  );
+
+  const handleMapClick = useCallback(
+    (event: MapMouseEvent) => {
+      onCloseInfoWindow();
+
+      // タップは待たずにすぐ反映する（スマートフォンではホバーできないため）。
+      const point = event.detail.latLng;
+      if (point && onPointerPoint) {
+        cancelPointerTimer();
+        onPointerPoint(point, event.map.getZoom() ?? null);
+      }
+    },
+    [cancelPointerTimer, onCloseInfoWindow, onPointerPoint],
+  );
 
   // 移動中は何度も発火させず、操作が落ち着いた時点の範囲だけを伝える。
   const handleIdle = useCallback(
@@ -178,6 +219,7 @@ export function RoadMap({
           mapTypeControl={false}
           streetViewControl={false}
           onClick={handleMapClick}
+          onMousemove={handleMouseMove}
           onIdle={handleIdle}
         >
           <TrafficLayer refreshKey={trafficRefreshKey} />

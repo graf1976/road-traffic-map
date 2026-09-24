@@ -175,6 +175,39 @@ describe("RoadMap", () => {
     expect(onBoundsChange).not.toHaveBeenCalled();
   });
 
+  it("カーソルが止まってから、その地点を知らせる", () => {
+    vi.useFakeTimers();
+    const onPointerPoint = vi.fn();
+    renderMap({ onPointerPoint });
+
+    const fakeMap = { getZoom: () => 12 };
+    const onMousemove = mapProps.current?.onMousemove as (event: unknown) => void;
+    onMousemove({ detail: { latLng: { lat: 35, lng: 139 } }, map: fakeMap });
+    onMousemove({ detail: { latLng: { lat: 36, lng: 140 } }, map: fakeMap });
+
+    // 動かしている間は呼ばない。
+    expect(onPointerPoint).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(600);
+
+    // 止まった位置だけを 1 回知らせる。
+    expect(onPointerPoint).toHaveBeenCalledTimes(1);
+    expect(onPointerPoint).toHaveBeenCalledWith({ lat: 36, lng: 140 }, 12);
+    vi.useRealTimers();
+  });
+
+  it("地図をタップしたときは待たずに知らせる", () => {
+    const onPointerPoint = vi.fn();
+    const onCloseInfoWindow = vi.fn();
+    renderMap({ onPointerPoint, onCloseInfoWindow });
+
+    const onClick = mapProps.current?.onClick as (event: unknown) => void;
+    onClick({ detail: { latLng: { lat: 34.7, lng: 135.5 } }, map: { getZoom: () => 14 } });
+
+    expect(onPointerPoint).toHaveBeenCalledWith({ lat: 34.7, lng: 135.5 }, 14);
+    expect(onCloseInfoWindow).toHaveBeenCalled();
+  });
+
   it("API の読み込みに失敗したらエラーを重ねて表示する", () => {
     apiState.status = "AUTH_FAILURE";
     renderMap();

@@ -10,11 +10,19 @@ import type { MapBounds, RegulationCollection } from "@/types/regulation";
 vi.mock("@/components/Map", () => ({
   RoadMap: ({
     onBoundsChange,
+    onPointerPoint,
   }: {
     onBoundsChange?: (bounds: MapBounds) => void;
+    onPointerPoint?: (point: { lat: number; lng: number }, zoom: number | null) => void;
     children?: ReactNode;
   }) => (
     <div data-testid="map-stub">
+      <button
+        type="button"
+        onClick={() => onPointerPoint?.({ lat: 35.62724, lng: 139.62598 }, 16)}
+      >
+        道路を指す
+      </button>
       <button
         type="button"
         onClick={() =>
@@ -72,10 +80,25 @@ const collection: RegulationCollection = {
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => collection,
+    vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes("/api/road")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            name: "東名高速道路",
+            operator: {
+              id: "nexco-central",
+              label: "NEXCO中日本 交通情報",
+              url: "https://www.c-nexco.co.jp/traffic/",
+            },
+          }),
+        };
+      }
+
+      return { ok: true, status: 200, json: async () => collection };
     }),
   );
 });
@@ -106,6 +129,17 @@ describe("トップページの一覧", () => {
       expect(screen.queryByText("関東の道路")).toBeNull();
     });
     expect(screen.getByText("九州の道路")).toBeTruthy();
+  });
+
+  it("道路を指すと道路名と管理会社のリンクを出す", async () => {
+    render(<Home />);
+    expect(await screen.findByText("関東の道路")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "道路を指す" }));
+
+    expect(await screen.findByText("東名高速道路")).toBeTruthy();
+    const link = screen.getByRole("link", { name: /NEXCO中日本/ });
+    expect(link.getAttribute("href")).toBe("https://www.c-nexco.co.jp/traffic/");
   });
 
   it("「地図の範囲のみ」を外すと全件表示に戻る", async () => {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
+import { InstallButton } from "@/components/InstallButton";
 import { Legend } from "@/components/Legend";
 import { LocateButton } from "@/components/LocateButton";
 import { OfficialLinks } from "@/components/OfficialLinks";
@@ -262,6 +263,7 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <InstallButton />
             <button
               type="button"
               onClick={locate}

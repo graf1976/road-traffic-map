@@ -19,7 +19,7 @@
 | 自動更新 | 更新なし（手動）／1 分／5 分／10 分 から選択。次回更新までの残り秒数も表示 |
 | 凡例 | 地図上に色の意味を表示（通行止め・規制の黒線は、実際に描画しているときだけ載せる） |
 | エラー表示 | 位置情報の失敗・API 取得失敗・API キー未設定・描画エラーをそれぞれ画面上で案内 |
-| ホーム画面に追加 | Web アプリマニフェストとサービスワーカーを備え、スマートフォンのホーム画面にアプリとして追加できる |
+| ホーム画面に追加 | ヘッダーの「ホーム画面に追加」ボタンから追加できる。Chrome が対応していれば標準のインストール画面を直接出し、出せない環境（LINE などのアプリ内ブラウザ・iPhone）では手順を案内する |
 
 ## セットアップ
 
@@ -93,6 +93,7 @@ src/
 │   ├── manifest.ts                Web アプリマニフェスト（ホーム画面追加用）
 │   └── page.tsx                   ヘッダー・フィルタ・一覧・地図の組み立て
 ├── components/
+│   ├── InstallButton.tsx          「ホーム画面に追加」ボタンと手順の案内
 │   ├── Legend.tsx                 凡例
 │   ├── LocateButton.tsx           地図上の現在地ボタン
 │   ├── Map.tsx                    地図本体（APIProvider / Traffic / 規制 / InfoWindow）
@@ -107,10 +108,12 @@ src/
 ├── hooks/
 │   ├── useCountdown.ts            次回更新までのカウントダウン
 │   ├── useCurrentLocation.ts      Geolocation API
+│   ├── useInstallPrompt.ts        ホーム画面への追加（PWA インストール）
 │   └── useRegulations.ts          SWR による取得・自動更新
 ├── lib/
 │   ├── env.ts                     環境変数の読み取り
 │   ├── geo.ts                     GeoJSON 座標の変換
+│   ├── install-guide.ts           利用環境の判定と追加手順
 │   ├── mock-regulations.ts        ダミーの規制データ
 │   ├── official-links.ts          地方の判定と公式サイトのURL
 │   ├── road-operators.ts          道路名から管理会社を判定

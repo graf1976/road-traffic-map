@@ -374,6 +374,20 @@ export default function Home() {
                 見本データ（開発用）
               </span>
             )}
+            {source === "sample" && (
+              <span className="text-[10px] text-slate-400">
+                線形 ©{" "}
+                <a
+                  href="https://www.openstreetmap.org/copyright"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2"
+                >
+                  OpenStreetMap
+                </a>{" "}
+                contributors
+              </span>
+            )}
           </div>
 
         </div>

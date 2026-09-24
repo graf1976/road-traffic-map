@@ -56,6 +56,8 @@ interface RoadMapProps {
   userPosition: LatLng | null;
   /** 地図の移動・拡大縮小が落ち着いたときに、表示範囲を知らせる。 */
   onBoundsChange?: (bounds: MapBounds) => void;
+  /** 値が変わると渋滞レイヤーを取り直す。 */
+  trafficRefreshKey?: number;
 }
 
 /** focus が更新されたら地図の中心とズームを移動する。 */
@@ -133,6 +135,7 @@ export function RoadMap({
   focus,
   userPosition,
   onBoundsChange,
+  trafficRefreshKey,
 }: RoadMapProps) {
   const selectedFeature = useMemo(
     () =>
@@ -177,7 +180,7 @@ export function RoadMap({
           onClick={handleMapClick}
           onIdle={handleIdle}
         >
-          <TrafficLayer />
+          <TrafficLayer refreshKey={trafficRefreshKey} />
           <RegulationLayer
             features={features}
             activeId={selection?.featureId ?? null}

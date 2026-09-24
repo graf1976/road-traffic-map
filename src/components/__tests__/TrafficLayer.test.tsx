@@ -49,6 +49,25 @@ describe("TrafficLayer", () => {
     expect(state.setMap).toHaveBeenLastCalledWith(null);
   });
 
+  it("refreshKey が変わるとレイヤーを作り直して渋滞状況を取り直す", () => {
+    const { rerender } = render(<TrafficLayer refreshKey={1} />);
+    expect(state.constructorArgs).toHaveLength(1);
+
+    rerender(<TrafficLayer refreshKey={2} />);
+
+    // 古いレイヤーを外し、新しいレイヤーを作って地図に載せ直す。
+    expect(state.constructorArgs).toHaveLength(2);
+    expect(state.setMap).toHaveBeenCalledWith(null);
+    expect(state.setMap).toHaveBeenLastCalledWith(state.map);
+  });
+
+  it("refreshKey が同じなら作り直さない", () => {
+    const { rerender } = render(<TrafficLayer refreshKey={1} />);
+    rerender(<TrafficLayer refreshKey={1} />);
+
+    expect(state.constructorArgs).toHaveLength(1);
+  });
+
   it("地図やライブラリが未準備なら何もしない", () => {
     state.map = null;
     render(<TrafficLayer />);

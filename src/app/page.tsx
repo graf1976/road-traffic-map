@@ -192,7 +192,7 @@ export default function Home() {
   useEffect(() => {
     if (refreshedAt === null) return;
 
-    const timerId = window.setTimeout(() => setRefreshedAt(null), 3000);
+    const timerId = window.setTimeout(() => setRefreshedAt(null), 5000);
     return () => window.clearTimeout(timerId);
   }, [refreshedAt]);
 
@@ -303,7 +303,7 @@ export default function Home() {
                 role="status"
                 className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800"
               >
-                更新しました
+                最新の情報に更新しました
               </span>
             )}
             {source === "live" && (
@@ -334,7 +334,8 @@ export default function Home() {
           {source === "unconfigured" && (
             <p className="text-xs leading-relaxed text-slate-500">
               通行止め・規制情報の提供元が未設定のため、黒い線は表示されません。
-              道路の色（緑・オレンジ・赤）は Google のリアルタイム渋滞情報です。
+              道路の色（緑・オレンジ・赤）は Google のリアルタイム渋滞情報で、
+              「今すぐ更新」を押すとその場で取り直します。
             </p>
           )}
         </div>
@@ -369,6 +370,7 @@ export default function Home() {
             focus={focus}
             userPosition={userPosition}
             onBoundsChange={setBounds}
+            trafficRefreshKey={generatedAt?.getTime() ?? 0}
           />
           <Legend />
           <LocateButton

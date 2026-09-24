@@ -270,6 +270,7 @@ export default function Home() {
               type="button"
               onClick={() => void handleManualRefresh()}
               disabled={isValidating}
+              title="渋滞状況と規制情報をその場で取り直します"
               className="rounded-md border border-slate-600 px-3 py-2 text-sm font-semibold transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isValidating ? "更新中…" : "今すぐ更新"}
